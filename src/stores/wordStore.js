@@ -32,11 +32,23 @@ export const useWordStore = defineStore('word', () => {
   }
 
   // 计算属性
-  const currentWords = computed(() => ({
-    verbs: verbs.value.length > 0 ? verbs.value : defaultWords.verbs,
-    adjectives: adjectives.value.length > 0 ? adjectives.value : defaultWords.adjectives,
-    nouns: nouns.value.length > 0 ? nouns.value : defaultWords.nouns
-  }))
+  const currentWords = computed(() => {
+    // 如果有选中的单词本，使用单词本的单词
+    if (currentWordBook.value && currentWordBook.value.words) {
+      return {
+        verbs: currentWordBook.value.words.verbs || [],
+        adjectives: currentWordBook.value.words.adjectives || [],
+        nouns: currentWordBook.value.words.nouns || []
+      }
+    }
+    
+    // 否则使用本地存储的单词或默认单词
+    return {
+      verbs: verbs.value && verbs.value.length > 0 ? verbs.value : defaultWords.verbs,
+      adjectives: adjectives.value && adjectives.value.length > 0 ? adjectives.value : defaultWords.adjectives,
+      nouns: nouns.value && nouns.value.length > 0 ? nouns.value : defaultWords.nouns
+    }
+  })
 
   // 所有单词本中的单词（去重）
   const allWordsFromBooks = computed(() => {

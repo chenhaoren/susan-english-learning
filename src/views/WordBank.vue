@@ -71,6 +71,16 @@
       </div>
     </div>
 
+    <!-- 调试信息 -->
+    <div class="debug-info" style="background: #f5f5f5; padding: 10px; margin: 10px 0; border-radius: 4px; font-size: 12px;">
+      <div>显示模式: {{ displayMode }}</div>
+      <div>当前单词本: {{ currentWordBook ? currentWordBook.name : '无' }}</div>
+      <div>单词本数量: {{ wordBooks.length }}</div>
+      <div>动词数量: {{ words.verbs ? words.verbs.length : 0 }}</div>
+      <div>形容词数量: {{ words.adjectives ? words.adjectives.length : 0 }}</div>
+      <div>名词数量: {{ words.nouns ? words.nouns.length : 0 }}</div>
+    </div>
+
     <div class="word-bank-groups">
       <div v-for="type in wordTypes" :key="type.value" class="word-group">
         <div class="group-title">
