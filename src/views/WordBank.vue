@@ -58,14 +58,34 @@
       </div>
     </div>
 
+    <!-- 搜索框 -->
+    <div class="search-section">
+      <div class="search-container">
+        <input 
+          v-model="searchText" 
+          type="text" 
+          placeholder="搜索单词..." 
+          class="search-input"
+        />
+        <span class="search-icon">🔍</span>
+      </div>
+    </div>
+
     <div class="word-bank-groups">
       <div v-for="type in wordTypes" :key="type.value" class="word-group">
         <div class="group-title">
-          <span>{{ type.label }}</span>
-          <span class="count">{{ words[type.value + 's'].length }}</span>
+          <div class="group-header">
+            <span class="group-name">{{ type.label }}</span>
+            <span class="group-count">{{ filteredWords(type.value).length }}/{{ words[type.value + 's'].length }}</span>
+          </div>
           <input v-model="newWord[type.value]" :placeholder="'添加'+type.label" @keyup.enter="addWord(type.value)" class="add-input" />
         </div>
         <div class="word-chips">
+          <div v-if="filteredWords(type.value).length === 0" class="empty-state">
+            <span class="empty-text">
+              {{ searchText.trim() ? '没有找到匹配的单词' : '暂无单词' }}
+            </span>
+          </div>
           <span
             v-for="word in filteredWords(type.value)"
             :key="word"
@@ -180,6 +200,7 @@ export default {
     })
     const hoverWord = ref('')
     const displayMode = ref('current')
+    const searchText = ref('')
     const wordBooks = computed(() => wordStore.wordBooks)
     const currentWordBook = computed(() => wordStore.currentWordBook)
 
@@ -201,7 +222,15 @@ export default {
       return `rgba(${r},${g},${b},0.18)`
     }
     function filteredWords(type) {
-      return words[type + 's']
+      const wordList = words[type + 's']
+      if (!searchText.value.trim()) {
+        return wordList
+      }
+      
+      const searchLower = searchText.value.toLowerCase()
+      return wordList.filter(word => 
+        word.toLowerCase().includes(searchLower)
+      )
     }
     function addWord(type) {
       const val = newWord[type].trim()
@@ -404,36 +433,37 @@ export default {
       })
     }
 
-    return {
-      wordTypes,
-      words,
-      newWord,
-      addWord,
-      deleteWord,
-      editWord,
-      editDialog,
-      closeEditDialog,
-      confirmEdit,
-      clearAll,
-      openImport,
-      fileInput,
-      handleImport,
-      exportWords,
-      getWordCount,
-      getWordPhonetics,
-      getColorByCount,
-      filteredWords,
-      hoverWord,
-      fetchAllPhonetics,
-      playWordPronunciation,
-      displayMode,
-      wordBooks,
-      currentWordBook,
-      toggleDisplayMode,
-      selectWordBook,
-      deleteWordBook,
-      formatDate
-    }
+          return {
+        wordTypes,
+        words,
+        newWord,
+        addWord,
+        deleteWord,
+        editWord,
+        editDialog,
+        closeEditDialog,
+        confirmEdit,
+        clearAll,
+        openImport,
+        fileInput,
+        handleImport,
+        exportWords,
+        getWordCount,
+        getWordPhonetics,
+        getColorByCount,
+        filteredWords,
+        hoverWord,
+        fetchAllPhonetics,
+        playWordPronunciation,
+        displayMode,
+        searchText,
+        wordBooks,
+        currentWordBook,
+        toggleDisplayMode,
+        selectWordBook,
+        deleteWordBook,
+        formatDate
+      }
   }
 }
 </script>
@@ -829,5 +859,116 @@ h1 {
 
 .mode-text {
   font-size: 0.9rem;
+}
+
+/* 搜索框样式 */
+.search-section {
+  margin: 18px 0;
+}
+
+.search-container {
+  position: relative;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.search-input {
+  width: 100%;
+  padding: 12px 40px 12px 16px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 1rem;
+  background: #fff;
+  transition: border-color 0.2s;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #42b983;
+}
+
+.search-icon {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #888;
+  font-size: 1rem;
+}
+
+/* 分组标题优化 */
+.group-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.group-name {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.group-count {
+  background: #f0f0f0;
+  color: #666;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+/* 空态提示 */
+.empty-state {
+  padding: 20px;
+  text-align: center;
+  color: #888;
+}
+
+.empty-text {
+  font-size: 0.95rem;
+}
+
+/* 单词chip极简风格优化 */
+.chip {
+  background: #fff !important;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  padding: 6px 12px;
+  margin: 4px;
+  display: inline-block;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.95rem;
+  color: #333;
+}
+
+.chip:hover {
+  border-color: #42b983;
+  background: #f8fffe !important;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(66, 185, 131, 0.1);
+}
+
+.chip.active {
+  border-color: #42b983;
+  background: #f0f9f6 !important;
+}
+
+/* 响应式优化 */
+@media (max-width: 768px) {
+  .search-input {
+    font-size: 0.95rem;
+    padding: 10px 36px 10px 14px;
+  }
+  
+  .chip {
+    font-size: 0.9rem;
+    padding: 5px 10px;
+  }
+  
+  .group-name {
+    font-size: 1rem;
+  }
 }
 </style> 
