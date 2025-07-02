@@ -50,17 +50,19 @@ export const useWordStore = defineStore('word', () => {
     defaultWords.nouns.forEach(word => allNouns.add(word))
     
     // 添加所有单词本中的单词
-    wordBooks.value.forEach(book => {
-      if (book.words.verbs) {
-        book.words.verbs.forEach(word => allVerbs.add(word))
-      }
-      if (book.words.adjectives) {
-        book.words.adjectives.forEach(word => allAdjectives.add(word))
-      }
-      if (book.words.nouns) {
-        book.words.nouns.forEach(word => allNouns.add(word))
-      }
-    })
+    if (Array.isArray(wordBooks.value)) {
+      wordBooks.value.forEach(book => {
+        if (book.words && book.words.verbs) {
+          book.words.verbs.forEach(word => allVerbs.add(word))
+        }
+        if (book.words && book.words.adjectives) {
+          book.words.adjectives.forEach(word => allAdjectives.add(word))
+        }
+        if (book.words && book.words.nouns) {
+          book.words.nouns.forEach(word => allNouns.add(word))
+        }
+      })
+    }
     
     return {
       verbs: Array.from(allVerbs),

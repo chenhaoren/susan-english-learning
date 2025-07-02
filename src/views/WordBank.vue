@@ -76,7 +76,7 @@
         <div class="group-title">
           <div class="group-header">
             <span class="group-name">{{ type.label }}</span>
-            <span class="group-count">{{ filteredWords(type.value).length }}/{{ words[type.value + 's'].length }}</span>
+            <span class="group-count">{{ filteredWords(type.value).length }}/{{ (words[type.value + 's'] || []).length }}</span>
           </div>
           <input v-model="newWord[type.value]" :placeholder="'添加'+type.label" @keyup.enter="addWord(type.value)" class="add-input" />
         </div>
@@ -222,14 +222,14 @@ export default {
       return `rgba(${r},${g},${b},0.18)`
     }
     function filteredWords(type) {
-      const wordList = words[type + 's']
+      const wordList = words[type + 's'] || []
       if (!searchText.value.trim()) {
         return wordList
       }
       
       const searchLower = searchText.value.toLowerCase()
       return wordList.filter(word => 
-        word.toLowerCase().includes(searchLower)
+        word && word.toLowerCase().includes(searchLower)
       )
     }
     function addWord(type) {
