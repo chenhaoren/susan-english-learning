@@ -297,6 +297,16 @@ export const useWordStore = defineStore('word', () => {
     }
   }
 
+  // 工具函数：强制转为字符串数组并去重、去空
+  function normalizeWordArray(arr) {
+    if (!Array.isArray(arr)) return []
+    return Array.from(new Set(
+      arr
+        .filter(w => typeof w === 'string' && w.trim())
+        .map(w => w.trim())
+    ))
+  }
+
   // 导入Excel文件并创建单词本
   const importExcelFile = async (file) => {
     try {
@@ -316,10 +326,10 @@ export const useWordStore = defineStore('word', () => {
             // 去掉第一行标题
             const rows = json.slice(1)
             
-            // 分别提取三列并去重
-            const verbs = Array.from(new Set(rows.map(row => row[0]).filter(Boolean)))
-            const adjectives = Array.from(new Set(rows.map(row => row[1]).filter(Boolean)))
-            const nouns = Array.from(new Set(rows.map(row => row[2]).filter(Boolean)))
+            // 分别提取三列并规范化
+            const verbs = normalizeWordArray(rows.map(row => row[0]))
+            const adjectives = normalizeWordArray(rows.map(row => row[1]))
+            const nouns = normalizeWordArray(rows.map(row => row[2]))
             
             // 生成单词本名称
             const wordBookName = generateWordBookName(file.name)
@@ -408,22 +418,23 @@ export const useWordStore = defineStore('word', () => {
 
   // 单词本管理方法
   const createWordBook = (name, words) => {
+    // 强制规范化
+    const safeWords = {
+      verbs: normalizeWordArray(words.verbs),
+      adjectives: normalizeWordArray(words.adjectives),
+      nouns: normalizeWordArray(words.nouns)
+    }
     const wordBook = {
       id: Date.now().toString(),
       name,
       createdAt: new Date().toISOString(),
-      words: {
-        verbs: words.verbs || [],
-        adjectives: words.adjectives || [],
-        nouns: words.nouns || []
-      },
+      words: safeWords,
       wordCount: {
-        verbs: (words.verbs || []).length,
-        adjectives: (words.adjectives || []).length,
-        nouns: (words.nouns || []).length
+        verbs: safeWords.verbs.length,
+        adjectives: safeWords.adjectives.length,
+        nouns: safeWords.nouns.length
       }
     }
-    
     wordBooks.value.push(wordBook)
     saveToStorage()
     return wordBook
