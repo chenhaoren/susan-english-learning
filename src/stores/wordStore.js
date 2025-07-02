@@ -13,6 +13,12 @@ export const useWordStore = defineStore('word', () => {
   
   // 音标数据存储
   const wordPhonetics = ref({})
+  
+  // 自然拼读切分结果缓存
+  const phonicsSegments = ref({})
+  
+  // 学习进度跟踪
+  const learningProgress = ref({})
 
   // 默认单词库
   const defaultWords = {
@@ -42,11 +48,15 @@ export const useWordStore = defineStore('word', () => {
       const storedAdjectives = JSON.parse(localStorage.getItem('adjectives'))
       const storedNouns = JSON.parse(localStorage.getItem('nouns'))
       const storedPhonetics = JSON.parse(localStorage.getItem('wordPhonetics'))
+      const storedPhonicsSegments = JSON.parse(localStorage.getItem('phonicsSegments'))
+      const storedLearningProgress = JSON.parse(localStorage.getItem('learningProgress'))
       
       if (storedVerbs) verbs.value = storedVerbs
       if (storedAdjectives) adjectives.value = storedAdjectives
       if (storedNouns) nouns.value = storedNouns
       if (storedPhonetics) wordPhonetics.value = storedPhonetics
+      if (storedPhonicsSegments) phonicsSegments.value = storedPhonicsSegments
+      if (storedLearningProgress) learningProgress.value = storedLearningProgress
     } catch (error) {
       console.error('加载存储数据失败:', error)
     }
@@ -58,6 +68,8 @@ export const useWordStore = defineStore('word', () => {
       localStorage.setItem('adjectives', JSON.stringify(adjectives.value))
       localStorage.setItem('nouns', JSON.stringify(nouns.value))
       localStorage.setItem('wordPhonetics', JSON.stringify(wordPhonetics.value))
+      localStorage.setItem('phonicsSegments', JSON.stringify(phonicsSegments.value))
+      localStorage.setItem('learningProgress', JSON.stringify(learningProgress.value))
     } catch (error) {
       console.error('保存数据失败:', error)
     }
@@ -105,6 +117,79 @@ export const useWordStore = defineStore('word', () => {
 
   const hasPhonetics = (word) => {
     return !!wordPhonetics.value[word.toLowerCase()]
+  }
+
+  // 自然拼读相关方法
+  const getPhonicsSegments = (word) => {
+    return phonicsSegments.value[word.toLowerCase()] || null
+  }
+
+  const setPhonicsSegments = (word, segments) => {
+    phonicsSegments.value[word.toLowerCase()] = segments
+    saveToStorage()
+  }
+
+  const hasPhonicsSegments = (word) => {
+    return !!phonicsSegments.value[word.toLowerCase()]
+  }
+
+  const clearPhonicsSegments = () => {
+    phonicsSegments.value = {}
+    saveToStorage()
+  }
+
+  // 学习进度相关方法
+  const getLearningProgress = (word) => {
+    return learningProgress.value[word.toLowerCase()] || {
+      viewed: 0,
+      practiced: 0,
+      mastered: false,
+      lastViewed: null,
+      difficulty: 'medium'
+    }
+  }
+
+  const updateLearningProgress = (word, action) => {
+    const progress = getLearningProgress(word)
+    
+    switch (action) {
+      case 'view':
+        progress.viewed++
+        progress.lastViewed = new Date().toISOString()
+        break
+      case 'practice':
+        progress.practiced++
+        break
+      case 'master':
+        progress.mastered = true
+        break
+      case 'reset':
+        progress.mastered = false
+        progress.practiced = 0
+        break
+    }
+
+    learningProgress.value[word.toLowerCase()] = progress
+    saveToStorage()
+  }
+
+  const setWordDifficulty = (word, difficulty) => {
+    const progress = getLearningProgress(word)
+    progress.difficulty = difficulty
+    learningProgress.value[word.toLowerCase()] = progress
+    saveToStorage()
+  }
+
+  const getMasteredWords = () => {
+    return Object.entries(learningProgress.value)
+      .filter(([word, progress]) => progress.mastered)
+      .map(([word]) => word)
+  }
+
+  const getWordsByDifficulty = (difficulty) => {
+    return Object.entries(learningProgress.value)
+      .filter(([word, progress]) => progress.difficulty === difficulty)
+      .map(([word]) => word)
   }
 
   // 批量导入单词并获取音标
@@ -201,6 +286,8 @@ export const useWordStore = defineStore('word', () => {
     nounCounts,
     selectedTypes,
     wordPhonetics,
+    phonicsSegments,
+    learningProgress,
     currentWords,
     isEmpty,
     loadFromStorage,
@@ -212,6 +299,15 @@ export const useWordStore = defineStore('word', () => {
     setWordPhonetics,
     setBatchPhonetics,
     hasPhonetics,
+    getPhonicsSegments,
+    setPhonicsSegments,
+    hasPhonicsSegments,
+    clearPhonicsSegments,
+    getLearningProgress,
+    updateLearningProgress,
+    setWordDifficulty,
+    getMasteredWords,
+    getWordsByDifficulty,
     importWordsWithPhonetics,
     preloadCommonPhonetics,
     clearExpiredCache

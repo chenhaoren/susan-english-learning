@@ -1,18 +1,20 @@
 <template>
   <div class="word-box" :class="{ 'hidden': !visible }">
     <div class="word" :id="`${type}-container`">
-      <!-- 自然拼读分割的单词 -->
-      <div class="word-segments" v-if="phoneticsData?.phoneticSegments">
-        <span 
-          v-for="(segment, index) in phoneticsData.phoneticSegments" 
-          :key="index"
-          class="word-segment"
-          :class="`segment-${segment.type}`"
-        >
-          {{ segment.text }}
-        </span>
-      </div>
-      <span v-else :id="type">{{ word }}</span>
+      <!-- 使用增强的自然拼读可视化组件 -->
+      <PhonicsVisualizer
+        :word="word"
+        :display-mode="phonicsDisplayMode"
+        :visual-theme="phonicsVisualTheme"
+        :animation-enabled="phonicsAnimationEnabled"
+        :validation-level="phonicsValidationLevel"
+        :show-confidence="phonicsShowConfidence"
+        :show-validation="phonicsShowValidation"
+        :auto-validate="phonicsAutoValidate"
+        @segment-click="handleSegmentClick"
+        @segment-hover="handleSegmentHover"
+        @analysis-complete="handleAnalysisComplete"
+      />
       <span class="word-badge" :id="`${type}-count`" v-if="count > 0">{{ count }}</span>
     </div>
     
@@ -67,9 +69,14 @@
 <script>
 import { computed, onMounted } from 'vue'
 import { useWordStore } from '../../stores/wordStore'
+import { useSettingsStore } from '../../stores/settingsStore'
+import PhonicsVisualizer from './PhonicsVisualizer.vue'
 
 export default {
   name: 'WordBox',
+  components: {
+    PhonicsVisualizer
+  },
   props: {
     word: {
       type: String,
@@ -90,6 +97,7 @@ export default {
   },
   setup(props) {
     const wordStore = useWordStore()
+    const settingsStore = useSettingsStore()
     
     const typeLabel = computed(() => {
       const labels = {
@@ -99,6 +107,15 @@ export default {
       }
       return labels[props.type] || props.type
     })
+
+    // 自然拼读配置
+    const phonicsDisplayMode = computed(() => settingsStore.phonicsDisplayMode)
+    const phonicsVisualTheme = computed(() => settingsStore.phonicsVisualTheme)
+    const phonicsAnimationEnabled = computed(() => settingsStore.phonicsAnimationEnabled)
+    const phonicsValidationLevel = computed(() => settingsStore.phonicsValidationLevel)
+    const phonicsShowConfidence = computed(() => settingsStore.phonicsShowConfidence)
+    const phonicsShowValidation = computed(() => settingsStore.phonicsShowValidation)
+    const phonicsAutoValidate = computed(() => settingsStore.phonicsAutoValidate)
 
     const phoneticsData = computed(() => {
       if (!props.word) return null
@@ -201,12 +218,38 @@ export default {
       }
     })
 
+    // 事件处理
+    const handleSegmentClick = (data) => {
+      console.log('音素点击:', data)
+      // 可以在这里添加音素点击的处理逻辑
+    }
+
+    const handleSegmentHover = (data) => {
+      console.log('音素悬停:', data)
+      // 可以在这里添加音素悬停的处理逻辑
+    }
+
+    const handleAnalysisComplete = (data) => {
+      console.log('分析完成:', data)
+      // 可以在这里添加分析完成的处理逻辑
+    }
+
     return {
       typeLabel,
       phoneticsData,
+      phonicsDisplayMode,
+      phonicsVisualTheme,
+      phonicsAnimationEnabled,
+      phonicsValidationLevel,
+      phonicsShowConfidence,
+      phonicsShowValidation,
+      phonicsAutoValidate,
       playUKPronunciation,
       playUSPronunciation,
-      playPronunciation
+      playPronunciation,
+      handleSegmentClick,
+      handleSegmentHover,
+      handleAnalysisComplete
     }
   }
 }
