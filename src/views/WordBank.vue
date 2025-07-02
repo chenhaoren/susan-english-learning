@@ -3,13 +3,61 @@
     <div class="header-row">
       <h1>单词库</h1>
       <div class="actions">
-        <button class="icon-btn" @click="openImport" title="导入"><span>📥</span></button>
+        <button class="icon-btn" @click="openImport" title="导入单词本"><span>📥</span></button>
         <button class="icon-btn" @click="exportWords" title="导出"><span>📤</span></button>
         <button class="icon-btn" @click="fetchAllPhonetics" title="获取音标"><span>🔊</span></button>
+        <button class="icon-btn" @click="toggleDisplayMode" :title="displayMode === 'current' ? '切换到总表模式' : '切换到当前单词本'">
+          <span>{{ displayMode === 'current' ? '📚' : '📖' }}</span>
+        </button>
         <button class="icon-btn danger" @click="clearAll" title="清空"><span>🗑️</span></button>
         <input type="file" ref="fileInput" style="display:none" @change="handleImport" accept=".xlsx,.csv" />
       </div>
     </div>
+
+    <!-- 单词本选择器 -->
+    <div class="word-book-selector" v-if="wordBooks.length > 0">
+      <div class="selector-header">
+        <span class="selector-title">单词本管理</span>
+        <span class="current-book-info" v-if="currentWordBook">
+          当前：{{ currentWordBook.name }}
+        </span>
+      </div>
+      <div class="word-book-list">
+        <div 
+          v-for="book in wordBooks" 
+          :key="book.id" 
+          class="word-book-item"
+          :class="{ active: currentWordBook && currentWordBook.id === book.id }"
+          @click="selectWordBook(book.id)"
+        >
+          <div class="book-info">
+            <div class="book-name">{{ book.name }}</div>
+            <div class="book-stats">
+              <span class="stat-item">动词: {{ book.wordCount.verbs }}</span>
+              <span class="stat-item">形容词: {{ book.wordCount.adjectives }}</span>
+              <span class="stat-item">名词: {{ book.wordCount.nouns }}</span>
+            </div>
+            <div class="book-date">{{ formatDate(book.createdAt) }}</div>
+          </div>
+          <div class="book-actions">
+            <button class="book-action-btn" @click.stop="deleteWordBook(book.id)" title="删除">
+              🗑️
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 显示模式提示 -->
+    <div class="display-mode-info" v-if="wordBooks.length > 0">
+      <div class="mode-indicator">
+        <span class="mode-icon">{{ displayMode === 'current' ? '📖' : '📚' }}</span>
+        <span class="mode-text">
+          {{ displayMode === 'current' ? '当前单词本模式' : '总表模式（所有单词本去重）' }}
+        </span>
+      </div>
+    </div>
+
     <div class="word-bank-groups">
       <div v-for="type in wordTypes" :key="type.value" class="word-group">
         <div class="group-title">
@@ -109,7 +157,7 @@
 </template>
 
 <script>
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { useWordStore } from '../stores/wordStore'
 
 export default {
@@ -124,8 +172,16 @@ export default {
     const newWord = reactive({ verb: '', adjective: '', noun: '' })
     const editDialog = reactive({ visible: false, type: '', oldWord: '', word: '' })
     const fileInput = ref(null)
-    const words = wordStore.currentWords
+    const words = computed(() => {
+      if (displayMode.value === 'all') {
+        return wordStore.allWordsFromBooks
+      }
+      return wordStore.currentWords
+    })
     const hoverWord = ref('')
+    const displayMode = ref('current')
+    const wordBooks = computed(() => wordStore.wordBooks)
+    const currentWordBook = computed(() => wordStore.currentWordBook)
 
     function getWordCount(word, type) {
       const counts = type === 'verb' ? wordStore.verbCounts : type === 'adjective' ? wordStore.adjectiveCounts : wordStore.nounCounts
@@ -188,11 +244,16 @@ export default {
       closeEditDialog()
     }
     function clearAll() {
-      if (!confirm('确定要清空全部单词库吗？')) return
-      wordStore.verbs = []
-      wordStore.adjectives = []
-      wordStore.nouns = []
-      wordStore.saveToStorage()
+      if (wordBooks.value.length > 0) {
+        if (!confirm('确定要清空所有单词本吗？这将删除所有上传的单词本。')) return
+        wordStore.clearAllWordBooks()
+      } else {
+        if (!confirm('确定要清空全部单词库吗？')) return
+        wordStore.verbs = []
+        wordStore.adjectives = []
+        wordStore.nouns = []
+        wordStore.saveToStorage()
+      }
     }
     
     // 获取单个单词音标
@@ -291,17 +352,19 @@ export default {
       if (!file) return
       
       try {
-        // 这里应该实现Excel/CSV解析
-        // 暂时使用模拟数据
-        const mockData = {
-          verbs: ['run', 'jump', 'swim'],
-          adjectives: ['fast', 'tall', 'beautiful'],
-          nouns: ['cat', 'dog', 'house']
-        }
-        
-        const result = await wordStore.importWordsWithPhonetics(mockData)
+        const result = await wordStore.importExcelFile(file)
         if (result.success) {
-          alert(`导入成功！\n导入单词：${result.wordsImported}个\n获取音标：${result.phoneticsFetched}个`)
+          const message = `单词本创建成功！\n` +
+            `单词本名称：${result.wordBook.name}\n` +
+            `导入单词：${result.wordsImported}个\n` +
+            `获取音标：${result.phoneticsFetched}个\n` +
+            `统计：动词${result.stats.verbs}个，形容词${result.stats.adjectives}个，名词${result.stats.nouns}个`
+          
+          alert(message)
+          
+          // 自动切换到新创建的单词本
+          wordStore.selectWordBook(result.wordBook.id)
+          displayMode.value = 'current'
         } else {
           alert(`导入失败：${result.error}`)
         }
@@ -315,6 +378,30 @@ export default {
     }
     function exportWords() {
       alert('导出功能待实现')
+    }
+
+    function toggleDisplayMode() {
+      displayMode.value = displayMode.value === 'current' ? 'all' : 'current'
+    }
+
+    function selectWordBook(id) {
+      wordStore.selectWordBook(id)
+    }
+
+    function deleteWordBook(id) {
+      if (!confirm('确定要删除这个单词本吗？')) return
+      wordStore.deleteWordBook(id)
+    }
+
+    function formatDate(dateString) {
+      const date = new Date(dateString)
+      return date.toLocaleDateString('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
     }
 
     return {
@@ -338,7 +425,14 @@ export default {
       filteredWords,
       hoverWord,
       fetchAllPhonetics,
-      playWordPronunciation
+      playWordPronunciation,
+      displayMode,
+      wordBooks,
+      currentWordBook,
+      toggleDisplayMode,
+      selectWordBook,
+      deleteWordBook,
+      formatDate
     }
   }
 }
@@ -609,5 +703,131 @@ h1 {
   .word-group {
     min-width: 0;
   }
+}
+
+.word-book-selector {
+  margin-bottom: 18px;
+}
+
+.selector-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.selector-title {
+  font-size: 1.08rem;
+  font-weight: 600;
+}
+
+.current-book-info {
+  background: #f5f7fa;
+  padding: 4px 8px;
+  border-radius: 8px;
+}
+
+.word-book-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.word-book-item {
+  background: #f5f7fa;
+  padding: 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 2px solid transparent;
+  min-width: 200px;
+  flex: 1;
+  max-width: 300px;
+}
+
+.word-book-item:hover {
+  background: #e5e9f2;
+  border-color: #42b983;
+}
+
+.word-book-item.active {
+  background: #42b983;
+  color: white;
+  border-color: #42b983;
+}
+
+.word-book-item.active .stat-item {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+.word-book-item.active .book-date {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.book-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.book-name {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.book-stats {
+  display: flex;
+  gap: 4px;
+  font-size: 0.9rem;
+}
+
+.stat-item {
+  background: #e0e0e0;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+.book-date {
+  font-size: 0.8rem;
+  color: #888;
+}
+
+.book-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
+.book-action-btn {
+  background: none;
+  border: none;
+  font-size: 1rem;
+  color: #888;
+  cursor: pointer;
+  padding: 0;
+}
+
+.display-mode-info {
+  margin-top: 18px;
+  padding: 8px;
+  background: #f5f7fa;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.mode-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.mode-icon {
+  font-size: 1.2rem;
+}
+
+.mode-text {
+  font-size: 0.9rem;
 }
 </style> 
