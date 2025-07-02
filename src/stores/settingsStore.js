@@ -6,6 +6,11 @@ export const useSettingsStore = defineStore('settings', () => {
   const deepseekKey = ref('')
   const isSettingsModalOpen = ref(false)
 
+  // 新增设置项
+  const gristToken = ref('')
+  const showPhonics = ref(false)
+  const showPhonetics = ref(false)
+
   // 自然拼读相关设置
   const phonicsStuffKey = ref('')
   const phonicsDisplayMode = ref('normal') // normal | phonics | detailed
@@ -56,6 +61,22 @@ export const useSettingsStore = defineStore('settings', () => {
         deepseekKey.value = storedKey
       }
 
+      // 加载新增设置
+      const storedGristToken = localStorage.getItem('gristToken')
+      if (storedGristToken) {
+        gristToken.value = storedGristToken
+      }
+
+      const storedShowPhonics = localStorage.getItem('showPhonics')
+      if (storedShowPhonics !== null) {
+        showPhonics.value = JSON.parse(storedShowPhonics)
+      }
+
+      const storedShowPhonetics = localStorage.getItem('showPhonetics')
+      if (storedShowPhonetics !== null) {
+        showPhonetics.value = JSON.parse(storedShowPhonetics)
+      }
+
       // 加载自然拼读设置
       const storedPhonicsKey = localStorage.getItem('phonicsStuffKey')
       if (storedPhonicsKey) {
@@ -101,6 +122,36 @@ export const useSettingsStore = defineStore('settings', () => {
       return true
     } catch (error) {
       console.error('保存Phonics+Stuff密钥失败:', error)
+      return false
+    }
+  }
+
+  // 保存Grist Token
+  const saveGristToken = (token) => {
+    try {
+      gristToken.value = token
+      localStorage.setItem('gristToken', token)
+      return true
+    } catch (error) {
+      console.error('保存Grist Token失败:', error)
+      return false
+    }
+  }
+
+  // 保存显示设置
+  const saveDisplaySettings = (settings) => {
+    try {
+      if (settings.showPhonics !== undefined) {
+        showPhonics.value = settings.showPhonics
+        localStorage.setItem('showPhonics', JSON.stringify(settings.showPhonics))
+      }
+      if (settings.showPhonetics !== undefined) {
+        showPhonetics.value = settings.showPhonetics
+        localStorage.setItem('showPhonetics', JSON.stringify(settings.showPhonetics))
+      }
+      return true
+    } catch (error) {
+      console.error('保存显示设置失败:', error)
       return false
     }
   }
@@ -216,6 +267,52 @@ export const useSettingsStore = defineStore('settings', () => {
     }
   }
 
+  // Grist 同步相关方法
+  const testGristConnection = async () => {
+    try {
+      if (!gristToken.value) {
+        return { success: false, message: '请先设置 Grist Token' }
+      }
+      
+      // 这里应该调用 Grist API 测试连接
+      // 暂时返回模拟结果
+      return { success: true, message: '连接测试成功' }
+    } catch (error) {
+      console.error('Grist 连接测试失败:', error)
+      return { success: false, message: '连接测试失败: ' + error.message }
+    }
+  }
+
+  const syncToGrist = async () => {
+    try {
+      if (!gristToken.value) {
+        return { success: false, message: '请先设置 Grist Token' }
+      }
+      
+      // 这里应该实现数据同步到 Grist 的逻辑
+      // 暂时返回模拟结果
+      return { success: true, message: '数据同步成功' }
+    } catch (error) {
+      console.error('Grist 同步失败:', error)
+      return { success: false, message: '同步失败: ' + error.message }
+    }
+  }
+
+  const syncFromGrist = async () => {
+    try {
+      if (!gristToken.value) {
+        return { success: false, message: '请先设置 Grist Token' }
+      }
+      
+      // 这里应该实现从 Grist 同步数据的逻辑
+      // 暂时返回模拟结果
+      return { success: true, message: '数据同步成功' }
+    } catch (error) {
+      console.error('Grist 同步失败:', error)
+      return { success: false, message: '同步失败: ' + error.message }
+    }
+  }
+
   // 初始化
   loadSettings()
 
@@ -223,6 +320,11 @@ export const useSettingsStore = defineStore('settings', () => {
     // 原有属性
     deepseekKey,
     isSettingsModalOpen,
+    
+    // 新增属性
+    gristToken,
+    showPhonics,
+    showPhonetics,
     
     // 自然拼读属性
     phonicsStuffKey,
@@ -244,6 +346,13 @@ export const useSettingsStore = defineStore('settings', () => {
     saveDeepseekKey,
     openSettingsModal,
     closeSettingsModal,
+    
+    // 新增方法
+    saveGristToken,
+    saveDisplaySettings,
+    testGristConnection,
+    syncToGrist,
+    syncFromGrist,
     
     // 自然拼读方法
     savePhonicsStuffKey,

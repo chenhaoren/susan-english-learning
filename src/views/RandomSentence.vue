@@ -32,9 +32,6 @@
           <button class="icon-btn" @click="showHistory" title="历史记录">
             <span>📋</span>
           </button>
-          <button class="icon-btn" @click="openSettingsModal" title="设置">
-            <span>⚙️</span>
-          </button>
         </div>
       </header>
 
@@ -152,6 +149,22 @@
     <button class="upload-fab" @click="openUploadModal" title="上传单词库">
       <span class="fab-icon">📥</span>
     </button>
+
+    <!-- 悬浮设置按钮 -->
+    <button class="settings-fab" @click="openSettingsModal" title="设置">
+      <span class="fab-icon">⚙️</span>
+    </button>
+
+    <!-- 设置弹窗 -->
+    <SettingsModal 
+      :is-open="isSettingsModalOpen"
+      @close="closeSettingsModal"
+    />
+    
+    <!-- 调试信息 -->
+    <div style="position: fixed; top: 10px; left: 10px; background: white; padding: 10px; border: 1px solid black; z-index: 1000;">
+      设置弹窗状态: {{ isSettingsModalOpen }}
+    </div>
   </div>
 </template>
 
@@ -161,11 +174,13 @@ import { useWordStore } from '../stores/wordStore'
 import { useSentenceStore } from '../stores/sentenceStore'
 import { useSettingsStore } from '../stores/settingsStore'
 import WordBox from '../components/ui/WordBox.vue'
+import SettingsModal from '../components/ui/SettingsModal.vue'
 
 export default {
   name: 'RandomSentence',
   components: {
-    WordBox
+    WordBox,
+    SettingsModal
   },
   setup() {
     const wordStore = useWordStore()
@@ -187,6 +202,7 @@ export default {
     const currentSentence = computed(() => sentenceStore.currentSentence)
     const sentenceResult = computed(() => sentenceStore.sentenceResult)
     const words = computed(() => wordStore.currentWords)
+    const isSettingsModalOpen = computed(() => settingsStore?.isSettingsModalOpen || false)
 
     const getWordCount = (word, type) => {
       if (!word) return 0
@@ -250,7 +266,21 @@ export default {
     }
 
     const openSettingsModal = () => {
-      settingsStore.openSettingsModal()
+      console.log('悬浮设置按钮被点击')
+      console.log('settingsStore:', settingsStore)
+      if (settingsStore) {
+        console.log('调用 openSettingsModal')
+        settingsStore.openSettingsModal()
+        console.log('isSettingsModalOpen:', settingsStore.isSettingsModalOpen)
+      } else {
+        console.log('settingsStore 未初始化')
+      }
+    }
+
+    const closeSettingsModal = () => {
+      if (settingsStore) {
+        settingsStore.closeSettingsModal()
+      }
     }
 
     const showWordBank = () => {
@@ -324,6 +354,7 @@ export default {
       currentSentence,
       sentenceResult,
       words,
+      isSettingsModalOpen,
       getWordCount,
       shouldShowConnector,
       toggleType,
@@ -332,6 +363,7 @@ export default {
       handleWordCount,
       openUploadModal,
       openSettingsModal,
+      closeSettingsModal,
       showWordBank,
       showHistory,
       checkGrammar
@@ -748,6 +780,33 @@ export default {
   box-shadow: 0 6px 25px rgba(66, 185, 131, 0.4);
 }
 
+.settings-fab {
+  position: fixed;
+  bottom: 2rem;
+  right: 5rem;
+  width: 56px;
+  height: 56px;
+  background: #f7b500;
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(247, 181, 0, 0.3);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* 调试样式 */
+  border: 2px solid red;
+}
+
+.settings-fab:hover {
+  transform: translateY(-2px) scale(1.1);
+  box-shadow: 0 6px 25px rgba(247, 181, 0, 0.4);
+  background: #e09e00;
+}
+
 .fab-icon {
   font-size: 1.5rem;
 }
@@ -859,6 +918,13 @@ export default {
   .upload-fab {
     bottom: 1rem;
     right: 1rem;
+    width: 48px;
+    height: 48px;
+  }
+  
+  .settings-fab {
+    bottom: 1rem;
+    right: 4rem;
     width: 48px;
     height: 48px;
   }
