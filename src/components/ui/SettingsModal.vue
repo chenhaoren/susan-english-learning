@@ -39,9 +39,22 @@
         <div class="setting-section">
           <h4 class="section-title">Grist 远程同步</h4>
           <p class="section-description">
-            设置 Grist 远程同步功能，实现数据的云端备份和同步。
+            设置 Grist 远程同步功能，实现数据的云端备份和跨端同步。
             <a href="https://docs.getgrist.com/" target="_blank" class="link">查看 Grist 文档</a>
           </p>
+          
+          <!-- Grist Token 设置引导 -->
+          <div class="grist-guide">
+            <h5 class="guide-title">如何获取 Grist API Token？</h5>
+            <ol class="guide-steps">
+              <li>访问 <a href="https://docs.getgrist.com/" target="_blank" class="link">Grist 官网</a> 并注册账号</li>
+              <li>登录后，点击右上角的用户头像，选择 "API Keys"</li>
+              <li>点击 "Create API Key" 创建新的 API Key</li>
+              <li>复制生成的 Token（注意保存，不会再次显示）</li>
+              <li>粘贴到下面的输入框中并保存</li>
+            </ol>
+          </div>
+          
           <div class="input-group">
             <input 
               type="password" 
@@ -53,6 +66,52 @@
               保存
             </button>
           </div>
+          
+          <!-- 组织 ID 和文档 ID 设置 -->
+          <div class="input-group" style="margin-top: 12px;">
+            <input 
+              type="text" 
+              v-model="gristOrgId"
+              placeholder="组织 ID（可选，留空使用默认）"
+              class="api-input"
+            />
+            <input 
+              type="text" 
+              v-model="gristDocId"
+              placeholder="文档 ID（可选，留空自动创建）"
+              class="api-input"
+            />
+          </div>
+          
+          <!-- 定时同步设置 -->
+          <div class="auto-sync-section">
+            <h5 class="guide-title">定时同步设置</h5>
+            <div class="toggle-item">
+              <div class="toggle-info">
+                <span class="toggle-label">启用定时同步</span>
+                <span class="toggle-description">自动定期同步数据到云端</span>
+              </div>
+              <label class="toggle-switch">
+                <input 
+                  type="checkbox" 
+                  v-model="autoSyncEnabled"
+                  @change="toggleAutoSync"
+                >
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div v-if="autoSyncEnabled" class="sync-interval">
+              <label>同步间隔：</label>
+              <select v-model="syncInterval" @change="updateSyncInterval">
+                <option value="15">15 分钟</option>
+                <option value="30">30 分钟</option>
+                <option value="60">1 小时</option>
+                <option value="120">2 小时</option>
+                <option value="240">4 小时</option>
+              </select>
+            </div>
+          </div>
+          
           <div class="sync-controls">
             <button class="sync-btn" @click="testGristConnection" :disabled="!gristToken || testingConnection">
               {{ testingConnection ? '测试中...' : '测试连接' }}
@@ -64,6 +123,12 @@
               {{ syncing ? '同步中...' : '从云端同步' }}
             </button>
           </div>
+          
+          <!-- 同步状态信息 -->
+          <div v-if="lastSyncTime" class="sync-info">
+            <small>最后同步时间：{{ formatTime(lastSyncTime) }}</small>
+          </div>
+          
           <div v-if="gristStatus" class="status-message" :class="gristStatusType">
             {{ gristStatus }}
           </div>
@@ -128,6 +193,8 @@ export default {
     // 响应式数据
     const deepseekKey = ref('')
     const gristToken = ref('')
+    const gristOrgId = ref('')
+    const gristDocId = ref('')
     const showPhonics = ref(false)
     const showPhonetics = ref(false)
     const deepseekKeyStatus = ref('')
@@ -136,6 +203,9 @@ export default {
     const gristStatusType = ref('info')
     const testingConnection = ref(false)
     const syncing = ref(false)
+    const autoSyncEnabled = ref(false)
+    const syncInterval = ref(30)
+    const lastSyncTime = ref('')
 
     // 计算属性
     const isOpen = computed(() => props.isOpen)
@@ -175,6 +245,14 @@ export default {
       
       const success = settingsStore.saveGristToken(token)
       if (success) {
+        // 同时保存组织 ID 和文档 ID
+        if (gristOrgId.value.trim()) {
+          localStorage.setItem('gristOrgId', gristOrgId.value.trim())
+        }
+        if (gristDocId.value.trim()) {
+          localStorage.setItem('gristDocId', gristDocId.value.trim())
+        }
+        
         showGristStatus('Grist Token 已保存！', 'success')
       } else {
         showGristStatus('保存失败，请重试', 'error')
@@ -267,14 +345,61 @@ export default {
       }, 3000)
     }
 
+    const toggleAutoSync = async () => {
+      try {
+        const { gristSyncService } = await import('../../services/GristSync.js')
+        
+        if (autoSyncEnabled.value) {
+          gristSyncService.startAutoSync(parseInt(syncInterval.value))
+          localStorage.setItem('autoSyncEnabled', 'true')
+          localStorage.setItem('syncInterval', syncInterval.value.toString())
+          showGristStatus('定时同步已启动', 'success')
+        } else {
+          gristSyncService.stopAutoSync()
+          localStorage.setItem('autoSyncEnabled', 'false')
+          showGristStatus('定时同步已停止', 'info')
+        }
+      } catch (error) {
+        console.error('切换定时同步失败:', error)
+        showGristStatus('切换定时同步失败', 'error')
+      }
+    }
+
+    const updateSyncInterval = async () => {
+      if (autoSyncEnabled.value) {
+        try {
+          const { gristSyncService } = await import('../../services/GristSync.js')
+          gristSyncService.stopAutoSync()
+          gristSyncService.startAutoSync(parseInt(syncInterval.value))
+          localStorage.setItem('syncInterval', syncInterval.value.toString())
+          showGristStatus(`同步间隔已更新为 ${syncInterval.value} 分钟`, 'success')
+        } catch (error) {
+          console.error('更新同步间隔失败:', error)
+        }
+      }
+    }
+
+    const formatTime = (timeString) => {
+      if (!timeString) return ''
+      const date = new Date(timeString)
+      return date.toLocaleString('zh-CN')
+    }
+
     // 监听弹窗打开，加载设置
     watch(() => props.isOpen, (newValue) => {
       if (newValue) {
         // 加载当前设置
         deepseekKey.value = settingsStore.deepseekKey || ''
         gristToken.value = settingsStore.gristToken || ''
+        gristOrgId.value = localStorage.getItem('gristOrgId') || ''
+        gristDocId.value = localStorage.getItem('gristDocId') || ''
         showPhonics.value = settingsStore.showPhonics || false
         showPhonetics.value = settingsStore.showPhonetics || false
+        
+        // 加载定时同步设置
+        autoSyncEnabled.value = localStorage.getItem('autoSyncEnabled') === 'true'
+        syncInterval.value = parseInt(localStorage.getItem('syncInterval')) || 30
+        lastSyncTime.value = localStorage.getItem('lastSyncTime') || ''
         
         // 清空状态消息
         deepseekKeyStatus.value = ''
@@ -285,6 +410,8 @@ export default {
     return {
       deepseekKey,
       gristToken,
+      gristOrgId,
+      gristDocId,
       showPhonics,
       showPhonetics,
       deepseekKeyStatus,
@@ -293,6 +420,9 @@ export default {
       gristStatusType,
       testingConnection,
       syncing,
+      autoSyncEnabled,
+      syncInterval,
+      lastSyncTime,
       isOpen,
       closeModal,
       handleBackdropClick,
@@ -301,7 +431,10 @@ export default {
       saveDisplaySettings,
       testGristConnection,
       syncToGrist,
-      syncFromGrist
+      syncFromGrist,
+      toggleAutoSync,
+      updateSyncInterval,
+      formatTime
     }
   }
 }
@@ -563,6 +696,69 @@ input:checked + .toggle-slider:before {
   background: #d1ecf1;
   color: #0c5460;
   border: 1px solid #bee5eb;
+}
+
+.grist-guide {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.guide-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 12px;
+}
+
+.guide-steps {
+  margin: 0;
+  padding-left: 20px;
+  color: #666;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.guide-steps li {
+  margin-bottom: 8px;
+}
+
+.auto-sync-section {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 16px;
+  margin: 16px 0;
+}
+
+.sync-interval {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sync-interval label {
+  font-size: 0.9rem;
+  color: #666;
+  white-space: nowrap;
+}
+
+.sync-interval select {
+  padding: 6px 12px;
+  border: 1px solid #e5e9f2;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  background: #fff;
+  color: #2c3e50;
+}
+
+.sync-info {
+  margin-top: 8px;
+  color: #666;
+  font-size: 0.8rem;
 }
 
 @keyframes fadeIn {

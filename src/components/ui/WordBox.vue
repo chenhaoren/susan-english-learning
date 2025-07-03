@@ -67,7 +67,7 @@
 </template>
 
 <script>
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, watch } from 'vue'
 import { useWordStore } from '../../stores/wordStore'
 import { useSettingsStore } from '../../stores/settingsStore'
 import PhonicsVisualizer from './PhonicsVisualizer.vue'
@@ -109,7 +109,16 @@ export default {
     })
 
     // 自然拼读配置
-    const phonicsDisplayMode = computed(() => settingsStore.phonicsDisplayMode)
+    const showPhonics = computed(() => settingsStore.showPhonics)
+    const phonicsDisplayMode = computed(() => {
+      // 如果开启了显示自然拼读，使用 phonics 模式，否则使用 normal 模式
+      return showPhonics.value ? 'phonics' : 'normal'
+    })
+
+    // 监听单词变化，优化动画
+    watch(() => props.word, () => {
+      // 单词变化时，可以在这里添加一些优化逻辑
+    })
     const phonicsVisualTheme = computed(() => settingsStore.phonicsVisualTheme)
     const phonicsAnimationEnabled = computed(() => settingsStore.phonicsAnimationEnabled)
     const phonicsValidationLevel = computed(() => settingsStore.phonicsValidationLevel)

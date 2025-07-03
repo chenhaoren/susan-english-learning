@@ -270,13 +270,9 @@ export const useSettingsStore = defineStore('settings', () => {
   // Grist 同步相关方法
   const testGristConnection = async () => {
     try {
-      if (!gristToken.value) {
-        return { success: false, message: '请先设置 Grist Token' }
-      }
-      
-      // 这里应该调用 Grist API 测试连接
-      // 暂时返回模拟结果
-      return { success: true, message: '连接测试成功' }
+      const { gristSyncService } = await import('../services/GristSync.js')
+      gristSyncService.setToken(gristToken.value)
+      return await gristSyncService.testConnection()
     } catch (error) {
       console.error('Grist 连接测试失败:', error)
       return { success: false, message: '连接测试失败: ' + error.message }
@@ -285,13 +281,49 @@ export const useSettingsStore = defineStore('settings', () => {
 
   const syncToGrist = async () => {
     try {
-      if (!gristToken.value) {
-        return { success: false, message: '请先设置 Grist Token' }
+      const { gristSyncService } = await import('../services/GristSync.js')
+      gristSyncService.setToken(gristToken.value)
+      
+      // 获取所有需要同步的数据
+      const { useWordStore } = await import('./wordStore.js')
+      const { useWordBookStore } = await import('./wordBookStore.js')
+      const { useSentenceStore } = await import('./sentenceStore.js')
+      
+      const wordStore = useWordStore()
+      const wordBookStore = useWordBookStore()
+      const sentenceStore = useSentenceStore()
+      
+      const syncData = {
+        wordStore: {
+          verbs: wordStore.verbs,
+          adjectives: wordStore.adjectives,
+          nouns: wordStore.nouns,
+          wordPhonetics: wordStore.wordPhonetics,
+          phonicsSegments: wordStore.phonicsSegments,
+          learningProgress: wordStore.learningProgress,
+          wordBooks: wordStore.wordBooks,
+          currentWordBook: wordStore.currentWordBook
+        },
+        wordBookStore: {
+          wordBooks: wordBookStore.wordBooks,
+          currentWordBookId: wordBookStore.currentWordBookId
+        },
+        settingsStore: {
+          deepseekKey: deepseekKey.value,
+          gristToken: gristToken.value,
+          showPhonics: showPhonics.value,
+          showPhonetics: showPhonetics.value,
+          phonicsConfig: phonicsConfig.value
+        },
+        sentenceStore: {
+          currentSentence: sentenceStore.currentSentence,
+          sentenceResult: sentenceStore.sentenceResult,
+          grammarResult: sentenceStore.grammarResult,
+          userSentence: sentenceStore.userSentence
+        }
       }
       
-      // 这里应该实现数据同步到 Grist 的逻辑
-      // 暂时返回模拟结果
-      return { success: true, message: '数据同步成功' }
+      return await gristSyncService.syncToGrist(syncData)
     } catch (error) {
       console.error('Grist 同步失败:', error)
       return { success: false, message: '同步失败: ' + error.message }
@@ -300,13 +332,64 @@ export const useSettingsStore = defineStore('settings', () => {
 
   const syncFromGrist = async () => {
     try {
-      if (!gristToken.value) {
-        return { success: false, message: '请先设置 Grist Token' }
+      const { gristSyncService } = await import('../services/GristSync.js')
+      gristSyncService.setToken(gristToken.value)
+      
+      const result = await gristSyncService.syncFromGrist()
+      
+      if (result.success && result.data) {
+        // 恢复数据到各个 stores
+        const { useWordStore } = await import('./wordStore.js')
+        const { useWordBookStore } = await import('./wordBookStore.js')
+        const { useSentenceStore } = await import('./sentenceStore.js')
+        
+        const wordStore = useWordStore()
+        const wordBookStore = useWordBookStore()
+        const sentenceStore = useSentenceStore()
+        
+        // 恢复 wordStore 数据
+        if (result.data.wordStore) {
+          const ws = result.data.wordStore
+          if (ws.verbs) wordStore.verbs = ws.verbs
+          if (ws.adjectives) wordStore.adjectives = ws.adjectives
+          if (ws.nouns) wordStore.nouns = ws.nouns
+          if (ws.wordPhonetics) wordStore.wordPhonetics = ws.wordPhonetics
+          if (ws.phonicsSegments) wordStore.phonicsSegments = ws.phonicsSegments
+          if (ws.learningProgress) wordStore.learningProgress = ws.learningProgress
+          if (ws.wordBooks) wordStore.wordBooks = ws.wordBooks
+          if (ws.currentWordBook) wordStore.currentWordBook = ws.currentWordBook
+          wordStore.saveToStorage()
+        }
+        
+        // 恢复 wordBookStore 数据
+        if (result.data.wordBookStore) {
+          const wbs = result.data.wordBookStore
+          if (wbs.wordBooks) wordBookStore.wordBooks = wbs.wordBooks
+          if (wbs.currentWordBookId) wordBookStore.currentWordBookId = wbs.currentWordBookId
+          wordBookStore.saveToStorage()
+        }
+        
+        // 恢复 settingsStore 数据
+        if (result.data.settingsStore) {
+          const ss = result.data.settingsStore
+          if (ss.deepseekKey !== undefined) deepseekKey.value = ss.deepseekKey
+          if (ss.gristToken !== undefined) gristToken.value = ss.gristToken
+          if (ss.showPhonics !== undefined) showPhonics.value = ss.showPhonics
+          if (ss.showPhonetics !== undefined) showPhonetics.value = ss.showPhonetics
+          if (ss.phonicsConfig) savePhonicsConfig(ss.phonicsConfig)
+        }
+        
+        // 恢复 sentenceStore 数据
+        if (result.data.sentenceStore) {
+          const ses = result.data.sentenceStore
+          if (ses.currentSentence) sentenceStore.currentSentence = ses.currentSentence
+          if (ses.sentenceResult) sentenceStore.sentenceResult = ses.sentenceResult
+          if (ses.grammarResult) sentenceStore.grammarResult = ses.grammarResult
+          if (ses.userSentence) sentenceStore.userSentence = ses.userSentence
+        }
       }
       
-      // 这里应该实现从 Grist 同步数据的逻辑
-      // 暂时返回模拟结果
-      return { success: true, message: '数据同步成功' }
+      return result
     } catch (error) {
       console.error('Grist 同步失败:', error)
       return { success: false, message: '同步失败: ' + error.message }

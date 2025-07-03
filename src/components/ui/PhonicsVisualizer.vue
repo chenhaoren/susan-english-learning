@@ -8,12 +8,7 @@
     <!-- 自然拼读模式 -->
     <div v-else-if="displayMode === 'phonics'" class="phonics-mode">
       <div class="word-segments" :class="segmentsClasses">
-        <transition-group 
-          name="segment-fade" 
-          tag="div" 
-          class="segments-container"
-          :class="{ 'animated': animationEnabled }"
-        >
+        <div class="segments-container" :class="{ 'animated': animationEnabled }">
           <span 
             v-for="(segment, index) in segments" 
             :key="`${segment.text}-${index}`"
@@ -29,19 +24,14 @@
               {{ Math.round(segment.confidence * 100) }}%
             </span>
           </span>
-        </transition-group>
+        </div>
       </div>
     </div>
 
     <!-- 详细模式 -->
     <div v-else-if="displayMode === 'detailed'" class="detailed-mode">
       <div class="word-segments" :class="segmentsClasses">
-        <transition-group 
-          name="segment-fade" 
-          tag="div" 
-          class="segments-container"
-          :class="{ 'animated': animationEnabled }"
-        >
+        <div class="segments-container" :class="{ 'animated': animationEnabled }">
           <span 
             v-for="(segment, index) in segments" 
             :key="`${segment.text}-${index}`"
@@ -58,7 +48,7 @@
               {{ Math.round(segment.confidence * 100) }}%
             </span>
           </span>
-        </transition-group>
+        </div>
       </div>
 
       <!-- 验证信息 -->
@@ -174,6 +164,11 @@ export default {
         return
       }
 
+      // 快速清空当前结果，避免动画延迟
+      segments.value = []
+      validation.value = null
+      sources.value = []
+      
       loading.value = true
       error.value = null
 
@@ -243,7 +238,8 @@ export default {
       const styles = {}
 
       if (props.animationEnabled) {
-        styles.animationDelay = `${index * 0.1}s`
+        // 减少动画延迟，让单词切换更快
+        styles.animationDelay = `${index * 0.05}s`
       }
 
       return styles
@@ -291,9 +287,24 @@ export default {
     // 监听属性变化
     watch(() => props.word, analyzeWord, { immediate: true })
     watch(() => props.validationLevel, analyzeWord)
+    watch(() => props.displayMode, (newMode) => {
+      if (newMode !== 'normal' && props.word) {
+        analyzeWord()
+      }
+    })
     watch(() => props.autoValidate, (newVal) => {
       if (newVal && props.word) {
         analyzeWord()
+      }
+    })
+
+    // 监听显示模式变化，快速切换
+    watch(() => props.displayMode, (newMode, oldMode) => {
+      if (newMode !== oldMode) {
+        // 立即清空结果，避免动画延迟
+        segments.value = []
+        validation.value = null
+        sources.value = []
       }
     })
 
@@ -336,77 +347,77 @@ export default {
 /* 主题样式 */
 .theme-colorful {
   --vowel-color: #e74c3c;
-  --vowel-bg: rgba(231, 76, 60, 0.1);
+  --vowel-bg: rgba(231, 76, 60, 0.08);
   --consonant-color: #3498db;
-  --consonant-bg: rgba(52, 152, 219, 0.1);
+  --consonant-bg: rgba(52, 152, 219, 0.08);
   --digraph-color: #9b59b6;
-  --digraph-bg: rgba(155, 89, 182, 0.1);
+  --digraph-bg: rgba(155, 89, 182, 0.08);
   --vowel-team-color: #f39c12;
-  --vowel-team-bg: rgba(243, 156, 18, 0.1);
+  --vowel-team-bg: rgba(243, 156, 18, 0.08);
   --r-controlled-color: #e67e22;
-  --r-controlled-bg: rgba(230, 126, 34, 0.1);
+  --r-controlled-bg: rgba(230, 126, 34, 0.08);
   --silent-e-color: #27ae60;
-  --silent-e-bg: rgba(39, 174, 96, 0.1);
+  --silent-e-bg: rgba(39, 174, 96, 0.08);
   --trigraph-color: #8e44ad;
-  --trigraph-bg: rgba(142, 68, 173, 0.1);
+  --trigraph-bg: rgba(142, 68, 173, 0.08);
   --blend-color: #16a085;
-  --blend-bg: rgba(22, 160, 133, 0.1);
+  --blend-bg: rgba(22, 160, 133, 0.08);
   --prefix-color: #d35400;
-  --prefix-bg: rgba(211, 84, 0, 0.1);
+  --prefix-bg: rgba(211, 84, 0, 0.08);
   --suffix-color: #c0392b;
-  --suffix-bg: rgba(192, 57, 43, 0.1);
+  --suffix-bg: rgba(192, 57, 43, 0.08);
   --other-color: #95a5a6;
-  --other-bg: rgba(149, 165, 166, 0.1);
+  --other-bg: rgba(149, 165, 166, 0.08);
 }
 
 .theme-minimal {
   --vowel-color: #2c3e50;
-  --vowel-bg: rgba(44, 62, 80, 0.05);
+  --vowel-bg: rgba(44, 62, 80, 0.03);
   --consonant-color: #34495e;
-  --consonant-bg: rgba(52, 73, 94, 0.05);
+  --consonant-bg: rgba(52, 73, 94, 0.03);
   --digraph-color: #2c3e50;
-  --digraph-bg: rgba(44, 62, 80, 0.08);
+  --digraph-bg: rgba(44, 62, 80, 0.05);
   --vowel-team-color: #34495e;
-  --vowel-team-bg: rgba(52, 73, 94, 0.08);
+  --vowel-team-bg: rgba(52, 73, 94, 0.05);
   --r-controlled-color: #2c3e50;
-  --r-controlled-bg: rgba(44, 62, 80, 0.08);
+  --r-controlled-bg: rgba(44, 62, 80, 0.05);
   --silent-e-color: #34495e;
-  --silent-e-bg: rgba(52, 73, 94, 0.08);
+  --silent-e-bg: rgba(52, 73, 94, 0.05);
   --trigraph-color: #2c3e50;
-  --trigraph-bg: rgba(44, 62, 80, 0.08);
+  --trigraph-bg: rgba(44, 62, 80, 0.05);
   --blend-color: #34495e;
-  --blend-bg: rgba(52, 73, 94, 0.08);
+  --blend-bg: rgba(52, 73, 94, 0.05);
   --prefix-color: #2c3e50;
-  --prefix-bg: rgba(44, 62, 80, 0.08);
+  --prefix-bg: rgba(44, 62, 80, 0.05);
   --suffix-color: #34495e;
-  --suffix-bg: rgba(52, 73, 94, 0.08);
+  --suffix-bg: rgba(52, 73, 94, 0.05);
   --other-color: #7f8c8d;
-  --other-bg: rgba(127, 140, 141, 0.05);
+  --other-bg: rgba(127, 140, 141, 0.03);
 }
 
 .theme-educational {
   --vowel-color: #e74c3c;
-  --vowel-bg: rgba(231, 76, 60, 0.15);
+  --vowel-bg: rgba(231, 76, 60, 0.12);
   --consonant-color: #3498db;
-  --consonant-bg: rgba(52, 152, 219, 0.15);
+  --consonant-bg: rgba(52, 152, 219, 0.12);
   --digraph-color: #9b59b6;
-  --digraph-bg: rgba(155, 89, 182, 0.15);
+  --digraph-bg: rgba(155, 89, 182, 0.12);
   --vowel-team-color: #f39c12;
-  --vowel-team-bg: rgba(243, 156, 18, 0.15);
+  --vowel-team-bg: rgba(243, 156, 18, 0.12);
   --r-controlled-color: #e67e22;
-  --r-controlled-bg: rgba(230, 126, 34, 0.15);
+  --r-controlled-bg: rgba(230, 126, 34, 0.12);
   --silent-e-color: #27ae60;
-  --silent-e-bg: rgba(39, 174, 96, 0.15);
+  --silent-e-bg: rgba(39, 174, 96, 0.12);
   --trigraph-color: #8e44ad;
-  --trigraph-bg: rgba(142, 68, 173, 0.15);
+  --trigraph-bg: rgba(142, 68, 173, 0.12);
   --blend-color: #16a085;
-  --blend-bg: rgba(22, 160, 133, 0.15);
+  --blend-bg: rgba(22, 160, 133, 0.12);
   --prefix-color: #d35400;
-  --prefix-bg: rgba(211, 84, 0, 0.15);
+  --prefix-bg: rgba(211, 84, 0, 0.12);
   --suffix-color: #c0392b;
-  --suffix-bg: rgba(192, 57, 43, 0.15);
+  --suffix-bg: rgba(192, 57, 43, 0.12);
   --other-color: #95a5a6;
-  --other-bg: rgba(149, 165, 166, 0.15);
+  --other-bg: rgba(149, 165, 166, 0.12);
 }
 
 /* 模式样式 */
@@ -428,9 +439,10 @@ export default {
   align-items: center;
   justify-content: center;
   flex-wrap: wrap;
-  gap: 2px;
+  gap: 0;
   font-size: 1.8rem;
   font-weight: 700;
+  will-change: opacity;
 }
 
 .segments-container {
@@ -438,97 +450,87 @@ export default {
   align-items: center;
   justify-content: center;
   flex-wrap: wrap;
-  gap: 2px;
+  gap: 0;
 }
 
 .word-segment {
   position: relative;
-  padding: 4px 6px;
-  border-radius: 6px;
+  padding: 2px 1px;
+  border-radius: 2px;
   cursor: pointer;
   transition: all 0.2s ease;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
   font-weight: 700;
-  border: 2px solid transparent;
+  border: none;
+  will-change: transform, opacity;
 }
 
 .word-segment:hover {
-  transform: scale(1.05);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transform: scale(1.02);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
 }
 
 .word-segment.hovered {
-  transform: scale(1.1);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  transform: scale(1.03);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 
 /* 音素类型样式 */
 .segment-vowel {
   color: var(--vowel-color);
   background: var(--vowel-bg);
-  border-color: var(--vowel-color);
 }
 
 .segment-consonant {
   color: var(--consonant-color);
   background: var(--consonant-bg);
-  border-color: var(--consonant-color);
 }
 
 .segment-digraph {
   color: var(--digraph-color);
   background: var(--digraph-bg);
-  border-color: var(--digraph-color);
 }
 
 .segment-vowel-team {
   color: var(--vowel-team-color);
   background: var(--vowel-team-bg);
-  border-color: var(--vowel-team-color);
 }
 
 .segment-r-controlled {
   color: var(--r-controlled-color);
   background: var(--r-controlled-bg);
-  border-color: var(--r-controlled-color);
 }
 
 .segment-silent-e {
   color: var(--silent-e-color);
   background: var(--silent-e-bg);
-  border-color: var(--silent-e-color);
 }
 
 .segment-trigraph {
   color: var(--trigraph-color);
   background: var(--trigraph-bg);
-  border-color: var(--trigraph-color);
 }
 
 .segment-blend {
   color: var(--blend-color);
   background: var(--blend-bg);
-  border-color: var(--blend-color);
 }
 
 .segment-prefix {
   color: var(--prefix-color);
   background: var(--prefix-bg);
-  border-color: var(--prefix-color);
 }
 
 .segment-suffix {
   color: var(--suffix-color);
   background: var(--suffix-bg);
-  border-color: var(--suffix-color);
 }
 
 .segment-other {
   color: var(--other-color);
   background: var(--other-bg);
-  border-color: var(--other-color);
 }
 
 /* 详细模式样式 */
@@ -631,11 +633,11 @@ export default {
   font-weight: 600;
 }
 
-/* 动画效果 */
+/* 动画效果 - 优化单词切换 */
 .segments-container.animated .word-segment {
-  animation: segmentFadeIn 0.5s ease-out forwards;
+  animation: segmentFadeIn 0.2s ease-out forwards;
   opacity: 0;
-  transform: translateY(10px);
+  transform: translateY(3px);
 }
 
 @keyframes segmentFadeIn {
@@ -645,20 +647,15 @@ export default {
   }
 }
 
-/* 过渡动画 */
-.segment-fade-enter-active,
-.segment-fade-leave-active {
-  transition: all 0.3s ease;
+/* 单词切换时的整体动画 */
+.phonics-mode,
+.detailed-mode {
+  transition: all 0.15s ease-out;
 }
 
-.segment-fade-enter-from {
-  opacity: 0;
-  transform: scale(0.8);
-}
-
-.segment-fade-leave-to {
-  opacity: 0;
-  transform: scale(0.8);
+/* 当单词变化时，整个容器会有轻微的淡入效果 */
+.word-segments {
+  transition: opacity 0.15s ease-out;
 }
 
 /* 加载状态 */
