@@ -7,6 +7,7 @@
           <router-link to="/" class="nav-link">随机组句</router-link>
           <router-link to="/sentence-transform" class="nav-link">句型转换</router-link>
           <router-link to="/word-bank" class="nav-link">单词库</router-link>
+          <router-link to="/phonics-practice" class="nav-link">自然拼读</router-link>
         </div>
       </div>
     </nav>

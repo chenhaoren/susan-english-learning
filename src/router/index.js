@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import RandomSentence from '../views/RandomSentence.vue'
 import SentenceTransform from '../views/SentenceTransform.vue'
 import WordBank from '../views/WordBank.vue'
+import PhonicsPractice from '../views/PhonicsPractice.vue'
 
 const routes = [
   {
@@ -21,6 +22,12 @@ const routes = [
     name: 'WordBank',
     component: WordBank,
     meta: { title: '单词库管理' }
+  },
+  {
+    path: '/phonics-practice',
+    name: 'PhonicsPractice',
+    component: PhonicsPractice,
+    meta: { title: '自然拼读练习' }
   }
 ]
 
